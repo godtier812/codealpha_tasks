@@ -8,6 +8,7 @@ on:
   push:
     paths:
       - ".github/workflows/train-task3.yml"
+      - "CodeAlpha_HandwrittenCharacterRecognition/src/train.py"
 
 permissions:
   contents: write

@@ -57,6 +57,7 @@ import seaborn as sns
 import tensorflow as tf
 import tensorflow_datasets as tfds
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split
 from tensorflow import keras
 from tensorflow.keras import layers
 
@@ -90,8 +91,14 @@ print("TensorFlow", tf.__version__, "| GPU found:", bool(tf.config.list_physical
 # %% [markdown]
 # ## 2. Load the data
 # **letters (the real task):** tfds.load downloads EMNIST Letters the first time
-# (about 536 MB, a few minutes), then reuses the saved copy. 88,800 training and
-# 14,800 test images, each 28 x 28 pixels, as (image, label) pairs.
+# (about 536 MB, a few minutes), then reuses the saved copy: 103,600 images,
+# each 28 x 28 pixels, as (image, label) pairs.
+#
+# **Why we make our own test set:** the "test" split that TensorFlow Datasets
+# gives for EMNIST Letters only contains the letters A to S (we found this on our
+# first run: T to Z had zero test images). So we pool all the images and split
+# them ourselves, 85% for training and 15% for testing, *stratified* so every
+# letter keeps the same share in both parts.
 #
 # **digits (warm-up):** MNIST, built into Keras: 60,000 training and 10,000 test
 # images of the digits 0-9. Use it to check your setup quickly.
@@ -106,14 +113,19 @@ def to_numpy(ds):
     return np.concatenate(images), np.concatenate(labels)
 
 if DATASET == "letters":
-    (train_ds, test_ds) = tfds.load("emnist/letters", split=["train", "test"], as_supervised=True)
-    x_train, y_train = to_numpy(train_ds)
-    x_test, y_test = to_numpy(test_ds)
+    all_ds = tfds.load("emnist/letters", split="train+test", as_supervised=True)  # every image
+    x_all, y_all = to_numpy(all_ds)
+    # stratify=y_all keeps each letter's share the same in the training and test parts
+    x_train, x_test, y_train, y_test = train_test_split(
+        x_all, y_all, test_size=0.15, stratify=y_all, random_state=SEED
+    )
+    del x_all, y_all  # free memory
 else:
     (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
     x_train, x_test = x_train[..., None], x_test[..., None]  # add the 1 "channel" axis: (N, 28, 28, 1)
 print("Train images:", x_train.shape, "| Test images:", x_test.shape)
 print("Label values found:", np.unique(y_train))
+print("Images per class in the test set:", np.bincount(y_test))
 
 # %% [markdown]
 # ## 3. Clean the data
@@ -136,6 +148,7 @@ x_train = x_train.astype("float32") / 255.0  # pixels 0-255 become 0-1
 x_test = x_test.astype("float32") / 255.0
 y_train, y_test = y_train.astype("int64"), y_test.astype("int64")
 assert y_train.min() == 0 and y_train.max() == len(CLASSES) - 1, "labels should run 0 to number of classes - 1"
+assert len(np.unique(y_test)) == len(CLASSES), "every class should appear in the test set"
 
 # %% [markdown]
 # ## 4. Look at the data
