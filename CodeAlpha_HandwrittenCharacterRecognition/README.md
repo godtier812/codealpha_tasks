@@ -1,6 +1,6 @@
 # Handwritten Character Recognition
 
-A convolutional neural network (CNN) that reads handwritten letters **A to Z** from 28 x 28 pixel images, trained on **EMNIST Letters**. Test accuracy: **XX.X%** <!-- fill in from results/emnist_cnn_metrics.txt after training -->
+A convolutional neural network (CNN) that reads handwritten letters **A to Z** from 28 x 28 pixel images, trained on **EMNIST Letters**. Test accuracy: **95.0%** on 15,540 held-out letters.
 
 Built for the **CodeAlpha Machine Learning Internship, Task 3**.
 
@@ -13,13 +13,14 @@ Built for the **CodeAlpha Machine Learning Internship, Task 3**.
 
 **EMNIST Letters** (Extended MNIST), loaded with TensorFlow Datasets (`emnist/letters`).
 
-- 88,800 training images and 14,800 test images, 28 x 28 grayscale
-- 26 balanced classes, upper and lower case of each letter merged
+- 103,600 images, 28 x 28 grayscale, 26 classes (upper and lower case of each letter merged)
+- Split here into 88,060 training and 15,540 test images (85% / 15%, stratified by letter)
 - Source: [NIST EMNIST page](https://www.nist.gov/itl/products-and-services/emnist-dataset) · [TensorFlow Datasets catalog](https://www.tensorflow.org/datasets/catalog/emnist)
 
-Two fixes the code applies:
+Three fixes the code applies:
 1. EMNIST images are stored mirrored and rotated, so each image is **transposed** to stand upright.
 2. Labels run 1 to 26, so they are **shifted to 0 to 25**.
+3. The ready-made "test" split in TensorFlow Datasets only holds the letters A to S (the first training run showed T to Z with zero test images). So all images are pooled and **split again, stratified**, so every letter is tested.
 
 ## Approach
 
@@ -32,18 +33,25 @@ Two fixes the code applies:
 
 ## Results
 
-<!-- Fill these in after running src/train.py -->
-
 | Metric | Value |
 | --- | --- |
-| Test accuracy | XX.X% |
-| Epochs run | XX |
+| Test accuracy | 95.0% (15,540 test letters) |
+| Macro F1 (average over the 26 letters) | 0.951 |
+| Epochs run | 15 |
+| Easiest letters | M, B, S, Z, C (F1 0.986 to 0.989) |
+| Hardest letters | I (0.753), L (0.750), G (0.875), Q (0.891) |
+
+Full per-letter scores: [`results/emnist_cnn_metrics.txt`](results/emnist_cnn_metrics.txt). The trained network is in `models/emnist_cnn.keras`.
+
+Validation accuracy sits slightly above training accuracy because augmentation and dropout make training harder on purpose; they are switched off when the model is checked.
 
 | Training curves | Confusion matrix |
 | --- | --- |
 | ![Training curves](images/training_curves.png) | ![Confusion matrix](images/confusion_matrix.png) |
 
-Most mistakes are letters that look alike in handwriting, such as **I / L** and **G / Q** (see `images/misclassified.png`).
+Most mistakes are letters that look alike in handwriting, mainly **I / L** and **G / Q** (see `images/misclassified.png`).
+
+![Examples the model got wrong](images/misclassified.png)
 
 ## How to run
 
@@ -54,7 +62,11 @@ Most mistakes are letters that look alike in handwriting, such as **I / L** and 
 3. Press **Runtime > Run all**. The first run downloads EMNIST (about 536 MB) and training takes a few minutes.
 4. Download the files it made (left sidebar, folder icon): `images/`, `results/`, `models/`. Put them in the same folders of this project.
 
-**Option B: your own computer**
+**Option B: GitHub Actions (no setup)**
+
+This repository trains itself: open the **Actions** tab, pick **Train Task 3 (EMNIST letters)** and press **Run workflow**. It trains on GitHub's servers (about 15 minutes) and saves the charts, metrics and model back here. The results above came from this workflow.
+
+**Option C: your own computer**
 
 ```bash
 # 1. Make a private Python environment (optional but tidy)
